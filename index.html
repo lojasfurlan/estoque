@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Contagem de Estoque</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', 'Roboto', sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .app-container {
+            max-width: 500px;
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #2a7faa;
+            border-radius: 16px;
+            padding: 20px 16px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .header h1 {
+            color: white;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .header h1 span { font-weight: 300; }
+
+        .loja-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f5f5f5;
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .loja-info .cidade {
+            font-weight: 600;
+            color: #2a7faa;
+            font-size: 16px;
+        }
+        .loja-info .btn-trocar {
+            padding: 4px 12px;
+            background-color: #2a7faa;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .loja-info .btn-trocar:hover { background-color: #1e5f7a; }
+
+        .idlanca-info {
+            background-color: #e3f2fd;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+        }
+        .idlanca-info .label { color: #555; font-weight: 500; }
+        .idlanca-info .valor { color: #0d47a1; font-weight: 700; }
+
+        .status-marcacao {
+            background-color: #f5f5f5;
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            border-left: 4px solid #2a7faa;
+        }
+        .status-marcacao .label { color: #555; font-weight: 500; }
+        .status-marcacao .valor { font-weight: 700; }
+        .status-marcacao .valor.liberado { color: #2e7d32; }
+        .status-marcacao .valor.bloqueado { color: #c62828; }
+
+        .tipo-contagem {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        .tipo-contagem button {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background-color: white;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            max-width: 180px;
+        }
+        .tipo-contagem button.ativo {
+            border-color: #2a7faa;
+            background-color: #e3f2fd;
+            color: #0d47a1;
+        }
+        .tipo-contagem button:active { transform: scale(0.97); }
+
+        .btn-abrir {
+            padding: 14px;
+            background-color: #2a7faa;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+            margin-bottom: 16px;
+        }
+        .btn-abrir:hover { background-color: #1e5f7a; }
+        .btn-abrir:disabled {
+            background-color: #999;
+            cursor: not-allowed;
+        }
+
+        .lista-contagens {
+            margin-top: 8px;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+        }
+        .lista-contagens .titulo {
+            font-weight: 600;
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        .lista-contagens .item {
+            display: grid;
+            grid-template-columns: 55px 1fr 40px 60px 75px;
+            gap: 4px;
+            padding: 6px 4px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 12px;
+            align-items: center;
+        }
+        .lista-contagens .item .codigo {
+            font-weight: 500;
+            color: #2a7faa;
+            word-break: break-all;
+        }
+        .lista-contagens .item .nome {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .lista-contagens .item .qtd {
+            text-align: center;
+            font-weight: 600;
+            color: #333;
+        }
+        .lista-contagens .item .data {
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+        }
+        .lista-contagens .item .acoes {
+            display: flex;
+            gap: 2px;
+            justify-content: flex-end;
+        }
+        .lista-contagens .item .acoes button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 2px 4px;
+            border-radius: 4px;
+            transition: background 0.15s;
+            line-height: 1;
+        }
+        .lista-contagens .item .acoes .btn-editar:hover {
+            background: #e3f2fd;
+            color: #0d47a1;
+        }
+        .lista-contagens .item .acoes .btn-excluir:hover {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .lista-contagens .vazio {
+            text-align: center;
+            color: #999;
+            padding: 20px 0;
+            font-size: 13px;
+        }
+        .lista-contagens .loading {
+            text-align: center;
+            color: #666;
+            padding: 10px 0;
+            font-size: 13px;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px 0 4px 0;
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* ========== MODAIS ========== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .modal-overlay.active { display: flex; }
+
+        .modal-login {
+            background-color: white;
+            border-radius: 16px;
+            padding: 30px 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+        }
+        .modal-login h2 {
+            text-align: center;
+            color: #2a7faa;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+        .modal-login label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 4px;
+        }
+        .modal-login select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .modal-login select:focus { outline: none; border-color: #2a7faa; }
+        .modal-login input[type="password"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .modal-login input[type="password"]:focus {
+            outline: none;
+            border-color: #2a7faa;
+        }
+        .modal-login .btn-login {
+            width: 100%;
+            padding: 12px;
+            background-color: #2a7faa;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-login .btn-login:hover { background-color: #1e5f7a; }
+        .modal-login .erro-senha {
+            color: #c62828;
+            font-size: 13px;
+            text-align: center;
+            margin-top: 8px;
+            display: none;
+        }
+        .modal-login .erro-senha.visible { display: block; }
+
+        /* Modal de contagem (principal) */
+        .modal-contagem {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: flex-end;
+            z-index: 1000;
+        }
+        .modal-contagem.active { display: flex; }
+        .modal-contagem-content {
+            background-color: white;
+            border-radius: 16px 16px 0 0;
+            width: 100%;
+            max-width: 500px;
+            max-height: 92vh;
+            padding: 24px 20px 30px;
+            overflow-y: auto;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+        }
+        .modal-handle {
+            width: 40px;
+            height: 4px;
+            background-color: #ddd;
+            border-radius: 4px;
+            margin: 0 auto 16px;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .modal-header h2 { font-size: 18px; font-weight: 600; }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+        .modal-close:hover { color: #333; }
+
+        #reader-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: #000;
+            position: relative;
+        }
+        #reader-container video {
+            width: 100%;
+            display: block;
+        }
+        #reader-container .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 60%;
+            border: 3px solid #2a7faa;
+            border-radius: 12px;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.3);
+            pointer-events: none;
+        }
+        .scanner-controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            padding: 12px 0;
+            flex-wrap: wrap;
+        }
+        .btn-scanner {
+            padding: 10px 20px;
+            background-color: #2a7faa;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            min-height: 40px;
+            transition: background-color 0.2s;
+        }
+        .btn-scanner:hover { background-color: #1e5f7a; }
+        .btn-scanner:disabled { background-color: #aaa; cursor: not-allowed; }
+        .btn-scanner-danger {
+            background-color: #e53935;
+        }
+        .btn-scanner-danger:hover { background-color: #c62828; }
+        .scanner-status {
+            text-align: center;
+            padding: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+        .scanner-status.active { color: #2e7d32; font-weight: 500; }
+        .scanner-status.error { color: #c62828; font-weight: 500; }
+
+        .manual-input-container {
+            display: flex;
+            gap: 8px;
+            padding: 8px 0;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .manual-input-container input {
+            padding: 10px 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 150px;
+            max-width: 280px;
+            transition: border-color 0.3s;
+            text-transform: uppercase;
+        }
+        .manual-input-container input:focus {
+            outline: none;
+            border-color: #2a7faa;
+        }
+        .manual-input-container .btn-buscar {
+            padding: 10px 20px;
+            background-color: #2a7faa;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            min-height: 40px;
+            transition: background-color 0.2s;
+        }
+        .manual-input-container .btn-buscar:hover { background-color: #1e5f7a; }
+        .manual-input-container .btn-buscar:disabled {
+            background-color: #aaa;
+            cursor: not-allowed;
+        }
+
+        .resultados-lista {
+            margin: 8px 0;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            display: none;
+        }
+        .resultados-lista.visivel { display: block; }
+        .resultado-item {
+            padding: 10px 14px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .resultado-item:last-child { border-bottom: none; }
+        .resultado-item:hover { background-color: #e3f2fd; }
+        .resultado-item .info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .resultado-item .info .nome {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .resultado-item .info .detalhes {
+            font-size: 12px;
+            color: #666;
+        }
+        .resultado-item .qtd {
+            font-weight: 600;
+            color: #2a7faa;
+            font-size: 14px;
+            background: #e3f2fd;
+            padding: 4px 10px;
+            border-radius: 12px;
+        }
+        .resultado-item .qtd.zero { background: #ffebee; color: #c62828; }
+
+        .produto-card {
+            background-color: #f9f9f9;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            border: 2px solid #e0e0e0;
+            transition: border-color 0.3s, border-width 0.3s;
+        }
+        .produto-card .produto-nome {
+            font-size: 20px;
+            font-weight: 700;
+            text-align: center;
+            padding: 8px 0;
+            border-bottom: 2px dashed #ddd;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+        }
+        .produto-card .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 14px;
+            border-bottom: 1px solid #eee;
+        }
+        .produto-card .info-row:last-child { border-bottom: none; }
+        .produto-card .info-row .label { color: #666; }
+        .produto-card .info-row .value { font-weight: 600; }
+
+        .quantidade-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 16px 0 8px 0;
+            flex-wrap: wrap;
+        }
+        .quantidade-container label { font-weight: 500; font-size: 16px; }
+        .quantidade-container input[type="number"] {
+            padding: 10px 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 20px;
+            width: 120px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .quantidade-container input[type="number"]:focus {
+            outline: none;
+            border-color: #2a7faa;
+        }
+        .quantidade-container input[type="number"]:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .status-msg {
+            text-align: center;
+            padding: 10px 12px;
+            font-size: 14px;
+            border-radius: 8px;
+            margin: 8px 0;
+            font-weight: 500;
+        }
+        .status-msg.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+        .status-msg.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+        .status-msg.info {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border: 1px solid #90caf9;
+        }
+        .status-msg.warning {
+            background-color: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+        }
+
+        .btn-salvar {
+            width: 100%;
+            padding: 14px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-top: 8px;
+        }
+        .btn-salvar:hover { background-color: #1e7e34; }
+        .btn-salvar:disabled { background-color: #aaa; cursor: not-allowed; }
+
+        .modal-editar {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1500;
+        }
+        .modal-editar.active { display: flex; }
+        .modal-editar-content {
+            background-color: white;
+            border-radius: 16px;
+            padding: 30px 24px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+        }
+        .modal-editar-content h2 {
+            text-align: center;
+            color: #2a7faa;
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+        .modal-editar-content .info-produto {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        .modal-editar-content .info-produto div {
+            padding: 2px 0;
+        }
+        .modal-editar-content label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+            margin-bottom: 4px;
+        }
+        .modal-editar-content input[type="number"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        .modal-editar-content input[type="number"]:focus {
+            outline: none;
+            border-color: #2a7faa;
+        }
+        .modal-editar-content .btn-editar-confirmar {
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-editar-content .btn-editar-confirmar:hover { background-color: #1e7e34; }
+        .modal-editar-content .btn-editar-cancelar {
+            width: 100%;
+            padding: 12px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .modal-editar-content .btn-editar-cancelar:hover { background-color: #5a6268; }
+
+        @media (max-width: 480px) {
+            .modal-contagem-content { padding: 16px 12px 20px; }
+            .produto-card .produto-nome { font-size: 17px; }
+            .quantidade-container input[type="number"] { width: 90px; font-size: 18px; }
+            .manual-input-container { flex-direction: column; align-items: stretch; }
+            .manual-input-container input { max-width: 100%; }
+            .tipo-contagem button { font-size: 12px; padding: 8px 12px; }
+            .lista-contagens .item {
+                grid-template-columns: 45px 1fr 35px 50px 65px;
+                font-size: 10px;
+            }
+            .lista-contagens .item .acoes button { font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>📦 CONTAGEM <span>ESTOQUE</span></h1>
+        </div>
+
+        <div class="loja-info">
+            <span class="cidade" id="cidadeAtual">🏪 CARREGANDO...</span>
+            <button class="btn-trocar" onclick="abrirLogin()">🔑 TROCAR LOJA</button>
+        </div>
+
+        <div class="idlanca-info">
+            <span class="label">🔖 ÚLTIMO IDLANCA:</span>
+            <span class="valor" id="idLancaDisplay">CARREGANDO...</span>
+        </div>
+
+        <div class="status-marcacao">
+            <span class="label">📋 MARCAÇÃO DO DIA:</span>
+            <span class="valor" id="statusMarcacaoDisplay">VERIFICANDO...</span>
+        </div>
+
+        <div class="tipo-contagem">
+            <button id="btnPrateleira" class="ativo" onclick="setTipoContagem('PRATELEIRA')">📦 PRATELEIRA</button>
+            <button id="btnEstoque" onclick="setTipoContagem('ESTOQUE')">🏚️ ESTOQUE</button>
+        </div>
+
+        <button class="btn-abrir" id="btnAbrirContagem" onclick="openContagemModal()">📸 INICIAR CONTAGEM</button>
+
+        <div class="lista-contagens">
+            <div class="titulo">📋 ÚLTIMAS CONTAGENS (ENVIADO = TRUE)</div>
+            <div id="listaContainer">
+                <div class="loading">⏳ Carregando...</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <span>📦 Contagem v4.0</span>
+        </div>
+    </div>
+
+    <!-- ========== MODAL LOGIN ========== -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-login">
+            <h2>🔑 TROCAR LOJA</h2>
+            <label for="selectCidade">Selecione a Cidade:</label>
+            <select id="selectCidade">
+                <option value="TABATINGA">TABATINGA</option>
+                <option value="BARIRI">BARIRI</option>
+                <option value="ITAPOLIS">ITAPOLIS</option>
+                <option value="NOVO HORIZONTE">NOVO HORIZONTE</option>
+                <option value="PEDERNEIRAS">PEDERNEIRAS</option>
+            </select>
+            <label for="inputSenha">Senha única:</label>
+            <input type="password" id="inputSenha" placeholder="Digite a senha...">
+            <div class="erro-senha" id="erroSenha">❌ Senha incorreta! Tente novamente.</div>
+            <button class="btn-login" onclick="trocarLoja()">✅ CONFIRMAR</button>
+            <div style="text-align:center; margin-top:12px;">
+                <button onclick="fecharLogin()" style="background:none;border:none;color:#999;cursor:pointer;font-size:13px;">✕ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODAL CONTAGEM ========== -->
+    <div class="modal-contagem" id="contagemModal">
+        <div class="modal-contagem-content">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <h2 id="modalTitle">📸 CONTAGEM - <span id="modalCidade">TABATINGA</span></h2>
+                <button class="modal-close" onclick="closeContagemModal()">✕</button>
+            </div>
+
+            <div id="conexaoStatus" class="status-msg info">🔍 Pronto para contar</div>
+
+            <!-- BLOCO DE AVISO - MARCAÇÃO DO DIA NÃO ENCONTRADA -->
+            <div id="marcacaoDiaContainer" style="display:none;">
+                <div class="status-msg warning" style="margin:12px 0;">
+                    <strong>🔒 MARCAÇÃO DO DIA NÃO ENCONTRADA!</strong>
+                    <br><br>
+                    Para realizar contagens, é necessário que a <strong>marcação do dia</strong> seja feita primeiro no sistema de gestão.
+                    <br><br>
+                    <span style="font-size:13px;color:#666;">
+                        📌 A marcação é registrada na tabela LANCAMENTO com a data de hoje.
+                        <br>Verifique se a marcação já foi realizada.
+                    </span>
+                </div>
+            </div>
+
+            <div id="reader-container">
+                <div id="reader"></div>
+                <div class="scanner-overlay"></div>
+            </div>
+            <div class="scanner-status" id="scannerStatus">📷 Posicione o código de barras</div>
+            <div class="scanner-controls" id="scanner-controls">
+                <button class="btn-scanner" id="btnStartScanner" onclick="startScanner()">▶ INICIAR LEITOR</button>
+                <button class="btn-scanner btn-scanner-danger" id="btnStopScanner" onclick="stopScanner()" style="display:none;">⏹ PARAR</button>
+            </div>
+
+            <div style="text-align:center;padding:4px 0;color:#999;font-size:12px;">— OU DIGITE MANUALMENTE —</div>
+
+            <div class="manual-input-container">
+                <input type="text" id="codigoInput" placeholder="Código, Ref ou Nome..." maxlength="50" style="text-transform: uppercase;" disabled>
+                <button class="btn-buscar" id="btnBuscarProduto" onclick="buscarProdutos()" disabled>BUSCAR</button>
+            </div>
+
+            <div id="resultadosLista" class="resultados-lista"></div>
+            <div id="statusMessage"></div>
+
+            <div class="produto-card" id="produtoCard">
+                <div class="produto-nome" id="produtoNome">AGUARDANDO LEITURA</div>
+                <div class="info-row">
+                    <span class="label">📦 CÓDIGO</span>
+                    <span class="value" id="produtoCodigo">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">🏷️ REFERÊNCIA</span>
+                    <span class="value" id="produtoRef">---</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">📊 ESTOQUE ATUAL</span>
+                    <span class="value" id="produtoEstoque">0</span>
+                </div>
+            </div>
+
+            <div class="quantidade-container" id="quantidade-container">
+                <label for="quantidadeInput">📊 QTD CONTADA:</label>
+                <input type="number" id="quantidadeInput" placeholder="0" step="any" min="0" value="" disabled>
+            </div>
+
+            <button class="btn-salvar" id="btnSalvarContagem" onclick="salvarContagem()" disabled>
+                💾 SALVAR CONTAGEM
+            </button>
+
+            <div style="padding-top:8px;text-align:center;font-size:12px;color:#999;">
+                Tipo: <span id="modalTipoContagem">PRATELEIRA</span> &nbsp;|&nbsp; IDLANCA: <span id="modalIdLanca">---</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== MODAL DE EDIÇÃO ========== -->
+    <div class="modal-editar" id="modalEditar">
+        <div class="modal-editar-content">
+            <h2>✏️ EDITAR QUANTIDADE</h2>
+            <div class="info-produto" id="editarInfoProduto">
+                <div><strong>Código:</strong> <span id="editarCodigo">-</span></div>
+                <div><strong>Nome:</strong> <span id="editarNome">-</span></div>
+                <div><strong>Quantidade atual:</strong> <span id="editarQuantidadeAtual">0</span></div>
+            </div>
+            <label for="editarQuantidade">Nova quantidade:</label>
+            <input type="number" id="editarQuantidade" step="any" min="0">
+            <button class="btn-editar-confirmar" onclick="confirmarEdicao()">💾 SALVAR ALTERAÇÃO</button>
+            <button class="btn-editar-cancelar" onclick="fecharModalEditar()">✕ CANCELAR</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIGURAÇÃO SUPABASE
+        // ============================================================
+        const SUPABASE_URL = 'https://cxkjgviwtytmwevffmdl.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN4a2pndml3dHl0bXdldmZmbWRsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MzYxNTc0NSwiZXhwIjoyMDU5MTkxNzQ1fQ.EtME043IFYAawd7b55v7QgWqL-7LiE1tcftpXYowU4o';
+
+        // ============================================================
+        // MAPEAMENTO DE TABELAS POR CIDADE
+        // ============================================================
+        const TABELAS_CIDADES = {
+            'TABATINGA': 'PRODUTOSLOCAL',
+            'BARIRI': 'PRODUTOSLOCALBARIRI',
+            'ITAPOLIS': 'PRODUTOSLOCALITA',
+            'NOVO HORIZONTE': 'PRODUTOSLOCALNH',
+            'PEDERNEIRAS': 'PRODUTOSLOCALPED'
+        };
+
+        const SENHA_UNICA = '191088';
+
+        // ============================================================
+        // ESTADO
+        // ============================================================
+        let cidadeAtual = localStorage.getItem('cidadeAtual') || 'TABATINGA';
+        let tabelaAtual = TABELAS_CIDADES[cidadeAtual] || 'PRODUTOSLOCAL';
+        let ultimoIdLanca = null;
+        let tipoContagem = 'PRATELEIRA';
+        let produtoSelecionado = null;
+        let registroEditando = null;
+        let html5QrCode = null;
+        let scannerAtivo = false;
+        let codigoLido = '';
+        let marcacaoDiaExiste = false;
+        let verificandoMarcacao = false;
+
+        // ============================================================
+        // FUNÇÕES DE SOM
+        // ============================================================
+        function playScanSound() {
+            try {
+                const audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 880;
+                osc.type = 'sine';
+                gain.gain.value = 0.15;
+                osc.start();
+                setTimeout(() => {
+                    osc.stop();
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                }, 150);
+                setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 500);
+            } catch (e) { /* ignora */ }
+        }
+
+        function playSuccessSound() {
+            try {
+                const audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                [523, 659, 784].forEach((freq, i) => {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.frequency.value = freq;
+                        osc.type = 'sine';
+                        gain.gain.value = 0.1;
+                        osc.start();
+                        setTimeout(() => { osc.stop(); }, 150);
+                    }, i * 150);
+                });
+                setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 2000);
+            } catch (e) { /* ignora */ }
+        }
+
+        function playErrorSound() {
+            try {
+                const audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.value = 400;
+                osc.type = 'sawtooth';
+                gain.gain.value = 0.1;
+                osc.start();
+                setTimeout(() => { osc.stop(); }, 300);
+                setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 2000);
+            } catch (e) { /* ignora */ }
+        }
+
+        function playSaveSound() {
+            try {
+                const audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+                [600, 800, 1000].forEach((freq, i) => {
+                    setTimeout(() => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.frequency.value = freq;
+                        osc.type = 'square';
+                        gain.gain.value = 0.06;
+                        osc.start();
+                        setTimeout(() => { osc.stop(); }, 80);
+                    }, i * 120);
+                });
+                setTimeout(() => { try { audioCtx.close(); } catch (e) {} }, 2000);
+            } catch (e) { /* ignora */ }
+        }
+
+        // ============================================================
+        // VERIFICAR MARCAÇÃO DO DIA NA TABELA LANCAMENTO
+        // USANDO created_at (campo correto)
+        // ============================================================
+        async function verificarMarcacaoDia() {
+            if (verificandoMarcacao) return;
+            verificandoMarcacao = true;
+
+            const display = document.getElementById('statusMarcacaoDisplay');
+            const btnAbrir = document.getElementById('btnAbrirContagem');
+            
+            display.textContent = '⏳ VERIFICANDO...';
+            display.className = 'valor';
+            btnAbrir.disabled = true;
+
+            try {
+                const hoje = new Date();
+                const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+                const dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+
+                // ============================================================
+                // SELECT CORRETO USANDO created_at:
+                // SELECT id 
+                // FROM LANCAMENTO 
+                // WHERE CIDADE = 'ITAPOLIS' 
+                // AND created_at >= '2026-09-08T00:00:00.000Z' 
+                // AND created_at < '2026-09-09T00:00:00.000Z' 
+                // LIMIT 1
+                // ============================================================
+                const url = `${SUPABASE_URL}/rest/v1/LANCAMENTO?select=id&CIDADE=eq.${encodeURIComponent(cidadeAtual)}&created_at=gte.${dataInicio.toISOString()}&created_at=lt.${dataFim.toISOString()}&limit=1`;
+                
+                console.log('🔍 SELECT executado:');
+                console.log(`SELECT id FROM LANCAMENTO WHERE CIDADE = '${cidadeAtual}' AND created_at >= '${dataInicio.toISOString()}' AND created_at < '${dataFim.toISOString()}' LIMIT 1`);
+                console.log('📅 URL:', url);
+
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const erroText = await response.text();
+                    console.error('❌ Erro na resposta:', response.status, erroText);
+                    throw new Error(`HTTP ${response.status}: ${erroText}`);
+                }
+
+                const dados = await response.json();
+                console.log('📊 Dados retornados:', dados);
+                
+                if (dados && dados.length > 0) {
+                    marcacaoDiaExiste = true;
+                    display.textContent = '✅ MARCAÇÃO REALIZADA!';
+                    display.className = 'valor liberado';
+                    btnAbrir.disabled = false;
+                    btnAbrir.textContent = '📸 INICIAR CONTAGEM';
+                    console.log('✅ Marcação do dia encontrada! ID:', dados[0].id);
+                } else {
+                    marcacaoDiaExiste = false;
+                    display.textContent = '❌ MARCAÇÃO NÃO ENCONTRADA';
+                    display.className = 'valor bloqueado';
+                    btnAbrir.disabled = true;
+                    btnAbrir.textContent = '🔒 AGUARDANDO MARCAÇÃO DO DIA';
+                    console.log('❌ Nenhuma marcação encontrada para hoje');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao verificar marcação:', error);
+                display.textContent = '⚠️ ERRO AO VERIFICAR';
+                display.className = 'valor bloqueado';
+                btnAbrir.disabled = true;
+            } finally {
+                verificandoMarcacao = false;
+            }
+        }
+
+        // ============================================================
+        // TIPO DE CONTAGEM
+        // ============================================================
+        function setTipoContagem(tipo) {
+            tipoContagem = tipo;
+            document.getElementById('btnPrateleira').className = tipo === 'PRATELEIRA' ? 'ativo' : '';
+            document.getElementById('btnEstoque').className = tipo === 'ESTOQUE' ? 'ativo' : '';
+            document.getElementById('modalTipoContagem').textContent = tipo;
+            localStorage.setItem('tipoContagem', tipo);
+            carregarContagens();
+            verificarMarcacaoDia();
+        }
+
+        // ============================================================
+        // TROCA DE LOJA
+        // ============================================================
+        function abrirLogin() {
+            document.getElementById('loginModal').classList.add('active');
+            document.getElementById('selectCidade').value = cidadeAtual;
+            document.getElementById('inputSenha').value = '';
+            document.getElementById('erroSenha').className = 'erro-senha';
+            document.getElementById('inputSenha').focus();
+        }
+        
+        function fecharLogin() {
+            document.getElementById('loginModal').classList.remove('active');
+        }
+        
+        function trocarLoja() {
+            const cidade = document.getElementById('selectCidade').value;
+            const senha = document.getElementById('inputSenha').value;
+            if (senha === SENHA_UNICA) {
+                cidadeAtual = cidade;
+                tabelaAtual = TABELAS_CIDADES[cidade];
+                localStorage.setItem('cidadeAtual', cidade);
+                document.getElementById('cidadeAtual').textContent = `🏪 ${cidade}`;
+                document.getElementById('erroSenha').className = 'erro-senha';
+                fecharLogin();
+                atualizarIdLanca();
+                addStatus(`✅ Loja alterada para: ${cidade}`, 'success');
+                resetCard();
+                document.getElementById('codigoInput').value = '';
+                document.getElementById('statusMessage').innerHTML = '';
+                carregarContagens();
+                verificarMarcacaoDia();
+            } else {
+                document.getElementById('erroSenha').className = 'erro-senha visible';
+                document.getElementById('inputSenha').value = '';
+                document.getElementById('inputSenha').focus();
+                playErrorSound();
+            }
+        }
+        
+        document.getElementById('inputSenha').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') trocarLoja();
+        });
+
+        // ============================================================
+        // IDLANCA
+        // ============================================================
+        async function buscarUltimoIdLanca(cidade) {
+            try {
+                const url = `${SUPABASE_URL}/rest/v1/LANCAMENTO?select=id&CIDADE=eq.${encodeURIComponent(cidade)}&order=id.desc&limit=1`;
+                const resp = await fetch(url, { 
+                    headers: { 
+                        'apikey': SUPABASE_KEY, 
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    } 
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data && data.length > 0) {
+                        return data[0].id;
+                    }
+                }
+                return null;
+            } catch (e) { 
+                return null; 
+            }
+        }
+
+        async function atualizarIdLanca() {
+            const display = document.getElementById('idLancaDisplay');
+            const modalDisplay = document.getElementById('modalIdLanca');
+            
+            display.textContent = 'CARREGANDO...';
+            modalDisplay.textContent = '...';
+            
+            const id = await buscarUltimoIdLanca(cidadeAtual);
+            
+            if (id !== null) {
+                ultimoIdLanca = id;
+                display.textContent = id;
+                modalDisplay.textContent = id;
+                return id;
+            } else {
+                ultimoIdLanca = null;
+                display.textContent = 'NENHUM';
+                modalDisplay.textContent = '---';
+                return null;
+            }
+        }
+
+        // ============================================================
+        // CARREGAR LISTA DE CONTAGENS
+        // ============================================================
+        async function carregarContagens() {
+            const container = document.getElementById('listaContainer');
+            container.innerHTML = '<div class="loading">⏳ Carregando...</div>';
+
+            const tabelaDestino = tipoContagem === 'PRATELEIRA' ? 'ESTPRATILEIRA' : 'ESTOQUE';
+            const url = `${SUPABASE_URL}/rest/v1/${tabelaDestino}?select=id,CODIGO,NOMEPROD,QUANTIDADE,CIDADE,created_at&CIDADE=eq.${encodeURIComponent(cidadeAtual)}&ENVIADO=eq.true&order=id.desc&limit=20`;
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+                if (!response.ok) {
+                    const erro = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${erro}`);
+                }
+                const dados = await response.json();
+                if (dados && dados.length > 0) {
+                    let html = '';
+                    dados.forEach(item => {
+                        const data = item.created_at ? new Date(item.created_at).toLocaleDateString('pt-BR') : '-';
+                        const nomeEscapado = (item.NOMEPROD || '').replace(/'/g, "\\'");
+                        html += `
+                            <div class="item">
+                                <span class="codigo">${item.CODIGO || '-'}</span>
+                                <span class="nome" title="${item.NOMEPROD || ''}">${item.NOMEPROD || '-'}</span>
+                                <span class="qtd">${item.QUANTIDADE || 0}</span>
+                                <span class="data">${data}</span>
+                                <span class="acoes">
+                                    <button class="btn-editar" onclick="abrirModalEditar('${item.id}', '${item.CODIGO || ''}', '${nomeEscapado}', '${item.QUANTIDADE || 0}')" title="Editar quantidade">✏️</button>
+                                    <button class="btn-excluir" onclick="confirmarExcluir('${item.id}')" title="Excluir">🗑️</button>
+                                </span>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<div class="vazio">📭 Nenhuma contagem encontrada.</div>';
+                }
+            } catch (error) {
+                console.error('❌ Erro ao carregar contagens:', error);
+                container.innerHTML = `<div class="vazio" style="color:#c62828;">❌ Erro ao carregar: ${error.message}</div>`;
+            }
+        }
+
+        // ============================================================
+        // FUNÇÕES DE EDIÇÃO E EXCLUSÃO
+        // ============================================================
+        function abrirModalEditar(id, codigo, nome, quantidadeAtual) {
+            registroEditando = { id, codigo, nome, quantidadeAtual };
+            document.getElementById('editarCodigo').textContent = codigo || '-';
+            document.getElementById('editarNome').textContent = nome || '-';
+            document.getElementById('editarQuantidadeAtual').textContent = quantidadeAtual || 0;
+            document.getElementById('editarQuantidade').value = quantidadeAtual || 0;
+            document.getElementById('modalEditar').classList.add('active');
+            document.getElementById('editarQuantidade').focus();
+        }
+
+        function fecharModalEditar() {
+            document.getElementById('modalEditar').classList.remove('active');
+            registroEditando = null;
+        }
+
+        async function confirmarEdicao() {
+            if (!registroEditando) return;
+            const novaQuantidade = parseFloat(document.getElementById('editarQuantidade').value);
+            if (isNaN(novaQuantidade) || novaQuantidade < 0) {
+                alert('Digite uma quantidade válida (número ≥ 0).');
+                return;
+            }
+
+            const btn = document.querySelector('.btn-editar-confirmar');
+            btn.disabled = true;
+            btn.textContent = '⏳ SALVANDO...';
+
+            const tabelaDestino = tipoContagem === 'PRATELEIRA' ? 'ESTPRATILEIRA' : 'ESTOQUE';
+            const url = `${SUPABASE_URL}/rest/v1/${tabelaDestino}?id=eq.${registroEditando.id}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ QUANTIDADE: novaQuantidade.toString() })
+                });
+
+                if (!response.ok) {
+                    const erro = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${erro}`);
+                }
+
+                playSaveSound();
+                alert('✅ Quantidade atualizada com sucesso!');
+                fecharModalEditar();
+                carregarContagens();
+            } catch (error) {
+                console.error('❌ Erro ao editar:', error);
+                alert(`❌ Erro ao atualizar: ${error.message}`);
+                playErrorSound();
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 SALVAR ALTERAÇÃO';
+            }
+        }
+
+        function confirmarExcluir(id) {
+            if (!confirm('⚠️ Tem certeza que deseja EXCLUIR esta contagem?\n\nEsta ação não pode ser desfeita!')) {
+                return;
+            }
+            executarExclusao(id);
+        }
+
+        async function executarExclusao(id) {
+            const tabelaDestino = tipoContagem === 'PRATELEIRA' ? 'ESTPRATILEIRA' : 'ESTOQUE';
+            const url = `${SUPABASE_URL}/rest/v1/${tabelaDestino}?id=eq.${id}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const erro = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${erro}`);
+                }
+
+                playSuccessSound();
+                alert('🗑️ Contagem excluída com sucesso!');
+                carregarContagens();
+            } catch (error) {
+                console.error('❌ Erro ao excluir:', error);
+                alert(`❌ Erro ao excluir: ${error.message}`);
+                playErrorSound();
+            }
+        }
+
+        // ============================================================
+        // BUSCAR PRODUTOS
+        // ============================================================
+        async function fazerRequisicao(filtro) {
+            const url = `${SUPABASE_URL}/rest/v1/${tabelaAtual}?select=*&${filtro}&order=NOME.asc&limit=1000`;
+            const response = await fetch(url, {
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`
+                }
+            });
+            if (!response.ok) {
+                const erro = await response.text();
+                throw new Error(`HTTP ${response.status}: ${erro}`);
+            }
+            return await response.json();
+        }
+
+        async function buscarProdutos() {
+            if (!marcacaoDiaExiste) {
+                document.getElementById('statusMessage').innerHTML = `<div class="status-msg warning">🔒 Aguarde a marcação do dia para buscar produtos.</div>`;
+                return;
+            }
+
+            const input = document.getElementById('codigoInput');
+            const termo = input.value.trim().toUpperCase();
+
+            if (!termo) {
+                resetCard();
+                document.getElementById('statusMessage').innerHTML = '';
+                return;
+            }
+
+            const statusDiv = document.getElementById('conexaoStatus');
+            const resultadosDiv = document.getElementById('resultadosLista');
+
+            statusDiv.className = 'status-msg info';
+            statusDiv.textContent = '⏳ Buscando...';
+            resultadosDiv.className = 'resultados-lista';
+            resultadosDiv.innerHTML = '';
+            document.getElementById('statusMessage').innerHTML = '';
+
+            try {
+                const termoEncoded = encodeURIComponent(termo);
+
+                let dados = await fazerRequisicao(`CODIGO=eq.${termoEncoded}`);
+                if (dados && dados.length > 0) {
+                    if (dados.length === 1) {
+                        selecionarProduto(dados[0]);
+                        statusDiv.className = 'status-msg success';
+                        statusDiv.textContent = `✅ Produto encontrado por CÓDIGO`;
+                        return;
+                    } else {
+                        mostrarLista(dados, 'CÓDIGO');
+                        return;
+                    }
+                }
+
+                dados = await fazerRequisicao(`REF=eq.${termoEncoded}`);
+                if (dados && dados.length > 0) {
+                    if (dados.length === 1) {
+                        selecionarProduto(dados[0]);
+                        statusDiv.className = 'status-msg success';
+                        statusDiv.textContent = `✅ Produto encontrado por REFERÊNCIA`;
+                        return;
+                    } else {
+                        mostrarLista(dados, 'REFERÊNCIA');
+                        return;
+                    }
+                }
+
+                dados = await fazerRequisicao(`NOME=like.%25${termoEncoded}%25`);
+                if (dados && dados.length > 0) {
+                    if (dados.length === 1) {
+                        selecionarProduto(dados[0]);
+                        statusDiv.className = 'status-msg success';
+                        statusDiv.textContent = `✅ Produto encontrado por NOME`;
+                        return;
+                    } else {
+                        mostrarLista(dados, 'NOME');
+                        return;
+                    }
+                }
+
+                statusDiv.className = 'status-msg error';
+                statusDiv.textContent = `❌ Nenhum produto encontrado para "${termo}"`;
+                resetCard();
+
+            } catch (error) {
+                console.error('❌ Erro:', error);
+                statusDiv.className = 'status-msg error';
+                statusDiv.textContent = `❌ Erro: ${error.message}`;
+                resetCard();
+            }
+        }
+
+        function mostrarLista(produtos, origem) {
+            const resultadosDiv = document.getElementById('resultadosLista');
+            const statusDiv = document.getElementById('conexaoStatus');
+            resultadosDiv.className = 'resultados-lista visivel';
+            resultadosDiv.innerHTML = `<div style="padding:8px;background:#f0f0f0;font-weight:500;">${produtos.length} produto(s) encontrado(s) por ${origem} - Clique para selecionar:</div>`;
+
+            produtos.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'resultado-item';
+                const estoque = p.ESTOQUE || 0;
+                div.innerHTML = `
+                    <div class="info">
+                        <span class="nome">${p.NOME || 'Sem nome'}</span>
+                        <span class="detalhes">Cód: ${p.CODIGO || '-'} | Ref: ${p.REF || '-'}</span>
+                    </div>
+                    <span class="qtd ${estoque === 0 ? 'zero' : ''}">${estoque}</span>
+                `;
+                div.addEventListener('click', () => selecionarProduto(p));
+                resultadosDiv.appendChild(div);
+            });
+
+            statusDiv.className = 'status-msg info';
+            statusDiv.textContent = `🔍 ${produtos.length} resultados. Clique em um para selecionar.`;
+        }
+
+        function selecionarProduto(produto) {
+            produtoSelecionado = produto;
+            document.getElementById('produtoNome').textContent = produto.NOME || 'SEM CADASTRO';
+            document.getElementById('produtoCodigo').textContent = produto.CODIGO || '---';
+            document.getElementById('produtoRef').textContent = produto.REF || '---';
+            document.getElementById('produtoEstoque').textContent = produto.ESTOQUE || 0;
+            document.getElementById('produtoCard').style.borderColor = '#4CAF50';
+            document.getElementById('produtoCard').style.borderWidth = '3px';
+            document.getElementById('btnSalvarContagem').disabled = false;
+            document.getElementById('quantidadeInput').value = '';
+            document.getElementById('quantidadeInput').focus();
+
+            document.getElementById('resultadosLista').className = 'resultados-lista';
+            document.getElementById('resultadosLista').innerHTML = '';
+            document.getElementById('statusMessage').innerHTML = '';
+            document.getElementById('conexaoStatus').className = 'status-msg success';
+            document.getElementById('conexaoStatus').textContent = `✅ Produto selecionado: ${produto.NOME}`;
+            playSuccessSound();
+        }
+
+        function resetCard() {
+            produtoSelecionado = null;
+            document.getElementById('produtoNome').textContent = 'AGUARDANDO LEITURA';
+            document.getElementById('produtoCodigo').textContent = '---';
+            document.getElementById('produtoRef').textContent = '---';
+            document.getElementById('produtoEstoque').textContent = '0';
+            document.getElementById('produtoCard').style.borderColor = '#e0e0e0';
+            document.getElementById('produtoCard').style.borderWidth = '2px';
+            document.getElementById('btnSalvarContagem').disabled = true;
+            document.getElementById('quantidadeInput').value = '';
+            document.getElementById('resultadosLista').className = 'resultados-lista';
+            document.getElementById('resultadosLista').innerHTML = '';
+        }
+
+        function addStatus(msg, type) {
+            const el = document.getElementById('conexaoStatus');
+            const cls = { info: 'status-msg info', success: 'status-msg success', error: 'status-msg error', warning: 'status-msg warning' } [type] || 'status-msg info';
+            el.className = cls;
+            el.textContent = msg;
+        }
+
+        // ============================================================
+        // SCANNER
+        // ============================================================
+        function startScanner() {
+            if (!marcacaoDiaExiste) {
+                document.getElementById('scannerStatus').textContent = '🔒 Aguarde a marcação do dia';
+                return;
+            }
+            if (scannerAtivo) return;
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                document.getElementById('scannerStatus').textContent = '⚠️ Câmera não suportada';
+                return;
+            }
+            document.getElementById('scannerStatus').textContent = '📷 Iniciando...';
+            document.getElementById('btnStartScanner').disabled = true;
+
+            try {
+                html5QrCode = new Html5Qrcode("reader");
+                html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 200 } },
+                    async (decodedText) => {
+                        if (codigoLido === decodedText && produtoSelecionado) return;
+                        codigoLido = decodedText;
+                        document.getElementById('scannerStatus').textContent = `📷 Lendo: ${decodedText}`;
+                        playScanSound();
+                        document.getElementById('codigoInput').value = decodedText;
+                        await buscarProdutos();
+                    },
+                    () => {}
+                ).then(() => {
+                    scannerAtivo = true;
+                    document.getElementById('scannerStatus').textContent = '✅ Câmera ativa';
+                    document.getElementById('scannerStatus').className = 'scanner-status active';
+                    document.getElementById('btnStartScanner').style.display = 'none';
+                    document.getElementById('btnStopScanner').style.display = 'inline-block';
+                    document.getElementById('btnStartScanner').disabled = false;
+                }).catch((err) => {
+                    document.getElementById('scannerStatus').textContent = '❌ Erro: ' + err.message;
+                    document.getElementById('scannerStatus').className = 'scanner-status error';
+                    document.getElementById('btnStartScanner').disabled = false;
+                });
+            } catch (error) {
+                document.getElementById('scannerStatus').textContent = '❌ Erro: ' + error.message;
+                document.getElementById('btnStartScanner').disabled = false;
+            }
+        }
+
+        function stopScanner() {
+            if (html5QrCode && scannerAtivo) {
+                html5QrCode.stop().then(() => {
+                    scannerAtivo = false;
+                    document.getElementById('scannerStatus').textContent = '⏹ Scanner parado';
+                    document.getElementById('scannerStatus').className = 'scanner-status';
+                    document.getElementById('btnStartScanner').style.display = 'inline-block';
+                    document.getElementById('btnStopScanner').style.display = 'none';
+                }).catch(() => {});
+            }
+        }
+
+        // ============================================================
+        // SALVAR CONTAGEM
+        // ============================================================
+        async function salvarContagemNoSupabase(dados) {
+            const tabelaDestino = tipoContagem === 'PRATELEIRA' ? 'ESTPRATILEIRA' : 'ESTOQUE';
+            const url = `${SUPABASE_URL}/rest/v1/${tabelaDestino}`;
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(dados)
+            });
+            if (!resp.ok) {
+                const err = await resp.text();
+                throw new Error(`HTTP ${resp.status}: ${err}`);
+            }
+            return true;
+        }
+
+        async function salvarContagem() {
+            if (!marcacaoDiaExiste) {
+                document.getElementById('statusMessage').innerHTML = `<div class="status-msg warning">🔒 Aguarde a marcação do dia para salvar contagens.</div>`;
+                return;
+            }
+
+            if (!produtoSelecionado) {
+                document.getElementById('statusMessage').innerHTML = `<div class="status-msg warning">⚠️ Nenhum produto selecionado.</div>`;
+                return;
+            }
+            const qtdInput = document.getElementById('quantidadeInput');
+            const quantidade = parseFloat(qtdInput.value);
+            if (isNaN(quantidade) || quantidade < 0) {
+                document.getElementById('statusMessage').innerHTML = `<div class="status-msg warning">⚠️ Digite uma quantidade válida (número ≥ 0).</div>`;
+                qtdInput.focus();
+                return;
+            }
+
+            if (ultimoIdLanca === null || ultimoIdLanca === undefined) {
+                document.getElementById('statusMessage').innerHTML = `<div class="status-msg warning">⚠️ Buscando IDLANCA...</div>`;
+                await atualizarIdLanca();
+                if (ultimoIdLanca === null) {
+                    document.getElementById('statusMessage').innerHTML = `<div class="status-msg error">❌ IDLANCA não encontrado para esta cidade.</div>`;
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('btnSalvarContagem');
+            btn.disabled = true;
+            btn.textContent = '⏳ SALVANDO...';
+
+            try {
+                const dados = {
+                    CODIGO: produtoSelecionado.CODIGO || '',
+                    NOMEPROD: produtoSelecionado.NOME || '',
+                    QUANTIDADE: quantidade.toString(),
+                    CIDADE: cidadeAtual,
+                    ENVIADO: true,
+                    IDLANCA: ultimoIdLanca
+                };
+                await salvarContagemNoSupabase(dados);
+                playSaveSound();
+                document.getElementById('statusMessage').innerHTML = `<div class="status-msg success">✅ Contagem salva! ${produtoSelecionado.NOME} - QTD: ${quantidade}</div>`;
+                document.getElementById('conexaoStatus').className = 'status-msg success';
+                document.getElementById('conexaoStatus').textContent = `✅ Salvo em ${cidadeAtual} (${tipoContagem})`;
+
+                await atualizarIdLanca();
+                document.getElementById('modalIdLanca').textContent = ultimoIdLanca || '---';
+                
+                carregarContagens();
+
+                setTimeout(async () => {
+                    if (confirm('✅ Contagem salva com sucesso!\n\nDeseja continuar contando?')) {
+                        resetCard();
+                        document.getElementById('codigoInput').value = '';
+                        document.getElementById('quantidadeInput').value = '';
+                        document.getElementById('statusMessage').innerHTML = '';
+                        if (!scannerAtivo && marcacaoDiaExiste) startScanner();
+                    } else {
+                        closeContagemModal();
+                    }
+                }, 500);
+            } catch (error) {
+                document.getElementById('statusMessage').innerHTML = `<div class="status-msg error">❌ Erro ao salvar: ${error.message}</div>`;
+                playErrorSound();
+                document.getElementById('conexaoStatus').className = 'status-msg error';
+                document.getElementById('conexaoStatus').textContent = `❌ Erro: ${error.message}`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 SALVAR CONTAGEM';
+                await atualizarIdLanca();
+                document.getElementById('modalIdLanca').textContent = ultimoIdLanca || '---';
+            }
+        }
+
+        // ============================================================
+        // ABRIR/FECHAR MODAL CONTAGEM
+        // ============================================================
+        function openContagemModal() {
+            if (!marcacaoDiaExiste) {
+                document.getElementById('marcacaoDiaContainer').style.display = 'block';
+                document.getElementById('reader-container').style.display = 'none';
+                document.getElementById('scannerStatus').style.display = 'none';
+                document.getElementById('scanner-controls').style.display = 'none';
+                document.querySelector('.manual-input-container').style.display = 'none';
+                document.getElementById('produtoCard').style.display = 'none';
+                document.getElementById('quantidade-container').style.display = 'none';
+                document.getElementById('btnSalvarContagem').style.display = 'none';
+                
+                document.getElementById('contagemModal').classList.add('active');
+                document.getElementById('modalCidade').textContent = cidadeAtual;
+                document.getElementById('modalTipoContagem').textContent = tipoContagem;
+                document.getElementById('modalIdLanca').textContent = ultimoIdLanca !== null ? ultimoIdLanca : '---';
+                document.getElementById('conexaoStatus').className = 'status-msg warning';
+                document.getElementById('conexaoStatus').textContent = '🔒 Marcação do dia não encontrada!';
+                return;
+            }
+
+            document.getElementById('marcacaoDiaContainer').style.display = 'none';
+            document.getElementById('reader-container').style.display = 'block';
+            document.getElementById('scannerStatus').style.display = 'block';
+            document.getElementById('scanner-controls').style.display = 'flex';
+            document.querySelector('.manual-input-container').style.display = 'flex';
+            document.getElementById('produtoCard').style.display = 'block';
+            document.getElementById('quantidade-container').style.display = 'flex';
+            document.getElementById('btnSalvarContagem').style.display = 'block';
+
+            document.getElementById('contagemModal').classList.add('active');
+            document.getElementById('modalCidade').textContent = cidadeAtual;
+            document.getElementById('modalTipoContagem').textContent = tipoContagem;
+            document.getElementById('modalIdLanca').textContent = ultimoIdLanca !== null ? ultimoIdLanca : '---';
+            
+            document.getElementById('codigoInput').disabled = false;
+            document.getElementById('btnBuscarProduto').disabled = false;
+            document.getElementById('quantidadeInput').disabled = false;
+            
+            resetCard();
+            document.getElementById('codigoInput').value = '';
+            document.getElementById('quantidadeInput').value = '';
+            document.getElementById('statusMessage').innerHTML = '';
+            document.getElementById('conexaoStatus').className = 'status-msg info';
+            document.getElementById('conexaoStatus').textContent = `✅ Pronto para contar em ${cidadeAtual} - ${tipoContagem}`;
+            
+            setTimeout(() => startScanner(), 800);
+        }
+
+        function closeContagemModal() {
+            stopScanner();
+            document.getElementById('contagemModal').classList.remove('active');
+            produtoSelecionado = null;
+        }
+
+        // ============================================================
+        // EVENTOS DOS MODAIS
+        // ============================================================
+        document.getElementById('contagemModal').addEventListener('click', function(e) {
+            if (e.target === this) closeContagemModal();
+        });
+        document.getElementById('loginModal').addEventListener('click', function(e) {
+            if (e.target === this) fecharLogin();
+        });
+        document.getElementById('modalEditar').addEventListener('click', function(e) {
+            if (e.target === this) fecharModalEditar();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (document.getElementById('contagemModal').classList.contains('active')) closeContagemModal();
+                if (document.getElementById('loginModal').classList.contains('active')) fecharLogin();
+                if (document.getElementById('modalEditar').classList.contains('active')) fecharModalEditar();
+            }
+        });
+
+        document.getElementById('codigoInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                buscarProdutos();
+            }
+        });
+
+        document.getElementById('quantidadeInput').addEventListener('focus', function() {
+            if (scannerAtivo) {
+                stopScanner();
+            }
+        });
+
+        document.getElementById('quantidadeInput').addEventListener('blur', function() {
+            const modalAberto = document.getElementById('contagemModal').classList.contains('active');
+            if (modalAberto && !scannerAtivo && !produtoSelecionado && marcacaoDiaExiste) {
+                setTimeout(() => {
+                    if (!scannerAtivo && !produtoSelecionado && document.getElementById('contagemModal').classList.contains('active') && marcacaoDiaExiste) {
+                        startScanner();
+                    }
+                }, 500);
+            }
+        });
+
+        // ============================================================
+        // INICIALIZAÇÃO
+        // ============================================================
+        async function init() {
+            cidadeAtual = localStorage.getItem('cidadeAtual') || 'TABATINGA';
+            tabelaAtual = TABELAS_CIDADES[cidadeAtual] || 'PRODUTOSLOCAL';
+            document.getElementById('cidadeAtual').textContent = `🏪 ${cidadeAtual}`;
+            const tipoSalvo = localStorage.getItem('tipoContagem') || 'PRATELEIRA';
+            setTipoContagem(tipoSalvo);
+            
+            await atualizarIdLanca();
+            await verificarMarcacaoDia();
+            await carregarContagens();
+            
+            document.getElementById('conexaoStatus').className = 'status-msg info';
+            document.getElementById('conexaoStatus').textContent = `✅ Loja: ${cidadeAtual} | Tabela: ${tabelaAtual}`;
+            console.log('📦 Contagem iniciada:', cidadeAtual, tabelaAtual);
+        }
+
+        setInterval(verificarMarcacaoDia, 60000);
+
+        init();
+    </script>
+</body>
+</html>
