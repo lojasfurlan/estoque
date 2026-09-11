@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Contagem de Estoque</title>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">
-    </script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -954,7 +953,6 @@
 
         // ============================================================
         // VERIFICAR MARCAÇÃO DO DIA NA TABELA LANCAMENTO
-        // USANDO created_at (campo correto)
         // ============================================================
         async function verificarMarcacaoDia() {
             if (verificandoMarcacao) return;
@@ -972,15 +970,6 @@
                 const dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
                 const dataFim = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
 
-                // ============================================================
-                // SELECT CORRETO USANDO created_at:
-                // SELECT id 
-                // FROM LANCAMENTO 
-                // WHERE CIDADE = 'ITAPOLIS' 
-                // AND created_at >= '2026-09-08T00:00:00.000Z' 
-                // AND created_at < '2026-09-09T00:00:00.000Z' 
-                // LIMIT 1
-                // ============================================================
                 const url = `${SUPABASE_URL}/rest/v1/LANCAMENTO?select=id&CIDADE=eq.${encodeURIComponent(cidadeAtual)}&created_at=gte.${dataInicio.toISOString()}&created_at=lt.${dataFim.toISOString()}&limit=1`;
                 
                 console.log('🔍 SELECT executado:');
@@ -1443,7 +1432,7 @@
         }
 
         // ============================================================
-        // SCANNER
+        // SCANNER (COM FOCO CONTÍNUO PARA TABLETS ANTIGOS)
         // ============================================================
         function startScanner() {
             if (!marcacaoDiaExiste) {
@@ -1477,6 +1466,22 @@
                     document.getElementById('btnStartScanner').style.display = 'none';
                     document.getElementById('btnStopScanner').style.display = 'inline-block';
                     document.getElementById('btnStartScanner').disabled = false;
+
+                    // ============================================================
+                    // FORÇAR FOCO CONTÍNUO (resolve problema em tablets antigos)
+                    // ============================================================
+                    setTimeout(() => {
+                        if (html5QrCode) {
+                            try {
+                                html5QrCode.applyVideoConstraints({
+                                    focusMode: "continuous"
+                                });
+                                console.log("✅ Foco contínuo aplicado.");
+                            } catch (e) {
+                                console.warn("⚠️ Não foi possível aplicar o foco contínuo:", e);
+                            }
+                        }
+                    }, 2000);
                 }).catch((err) => {
                     document.getElementById('scannerStatus').textContent = '❌ Erro: ' + err.message;
                     document.getElementById('scannerStatus').className = 'scanner-status error';
